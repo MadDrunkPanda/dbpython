@@ -116,7 +116,7 @@ def find_client(conn, l_name=None, f_name=None, mail=None, phonenum=None):
 
 
 
-with psycopg2.connect(database="client_db", user="postgres", password="19derParol83") as conn:
+with psycopg2.connect(database="clients_db", user="postgres", password="") as conn:
 
     # создаем таблицы
     # create_db(conn)
