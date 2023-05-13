@@ -33,7 +33,6 @@ def add_client(conn, l_name, f_name, mail, phonenum=None):
     a = cur.fetchone()
     cur = conn.cursor()
     if type(phonenum) == int:
-        print(phonenum)
         cur.execute("""INSERT INTO phone(phone_number) VALUES(%d) RETURNING phone_id;""" % (phonenum))
         b = cur.fetchone()
         cur.execute("""INSERT INTO userphone(id_ph, id_user) VALUES(%d,%d);""" % (b[0], a[0]))
@@ -93,10 +92,20 @@ def phone_delete(conn, client_id, phonenum):
 
 def client_delete(conn, client_id):
     cur = conn.cursor()
+    cur.execute("""SELECT phone_id FROM phone
+    JOIN userphone ON userphone.id_ph = phone.phone_id
+    JOIN client ON userphone.id_user = client.user_id
+    WHERE user_id =%d;""" % (client_id))
+    a = cur.fetchall()
+    print(a)
     cur.execute("""
     DELETE  FROM userphone WHERE id_user = %d""" % (client_id))
     cur.execute("""
     DELETE FROM client WHERE user_id = %d""" % (client_id))
+    for i in a:
+        cur.execute("""DELETE FROM phone WHERE phone_id =%d;""" % (i[0]))
+        print('-')
+
     cur.close()
     conn.commit()
     print('Клиент удален!')
@@ -106,18 +115,39 @@ def find_client(conn, l_name=None, f_name=None, mail=None, phonenum=None):
     cur = conn.cursor()
     a = 'Не найдено'
     if type(l_name) == str:
-        print('Y')
         cur.execute("""
-        SELECT user_id,last_name,first_name,e-mail FROM client WHERE last_name =%s;""",(l_name))
-        a = cur.fetchone()
-        print(a)
+        SELECT user_id,last_name,first_name,email,phone_id,phone_number FROM client
+        JOIN userphone ON userphone.id_user = client.user_id
+        JOIN phone ON id_ph = phone.phone_id
+        WHERE last_name =%s;""", (l_name,))
+        a = cur.fetchall()
+    if type(f_name) == str:
+        cur.execute("""
+                SELECT user_id,last_name,first_name,email,phone_id,phone_number FROM client
+                JOIN userphone ON userphone.id_user = client.user_id
+                JOIN phone ON id_ph = phone.phone_id
+                WHERE first_name =%s;""", (f_name,))
+        a = cur.fetchall()
+
+    if type(mail) == str:
+        cur.execute("""
+                SELECT user_id,last_name,first_name,email,phone_id,phone_number FROM client
+                JOIN userphone ON userphone.id_user = client.user_id
+                JOIN phone ON id_ph = phone.phone_id
+                WHERE email =%s;""", (mail,))
+        a = cur.fetchall()
+
+    if type(phonenum) == int:
+        cur.execute("""
+                SELECT user_id,last_name,first_name,email,phone_id,phone_number FROM client
+                JOIN userphone ON userphone.id_user = client.user_id
+                JOIN phone ON id_ph = phone.phone_id
+                WHERE phone_number =%d;""" % (phonenum))
+        a = cur.fetchall()
+    print(a)
 
 
-
-
-
-with psycopg2.connect(database="clients_db", user="postgres", password="") as conn:
-
+with psycopg2.connect(database="clients_db", user="postgres", password="postgres") as conn:
     # создаем таблицы
     # create_db(conn)
 
@@ -126,7 +156,9 @@ with psycopg2.connect(database="clients_db", user="postgres", password="") as co
     # f_name = 'Иоанн'
     # mail = 'random@mail.ru'
     # phonenum = 89199997707
-    # add_client(conn, 'Иванов', 'Иоанн', 'random@mail.ru', 89199997707)
+    # add_client(conn, 'Иванов', 'Иоанн', 'random@mail.ru', 89999997707)
+    # add_client(conn, 'Иванов', 'Игорь', 'igor@mail.ru', 89999997781)
+    # add_client(conn, 'Петров', 'Игорь', 'petrov@mail.ru', 89999997792)
 
     # Добавление телефона:
     # client_id = 1
@@ -141,16 +173,18 @@ with psycopg2.connect(database="clients_db", user="postgres", password="") as co
     # change_client(conn, 1, 'Иванов', 'Иван' , 'notrandom@mail.ru')
 
     # Удаление телефона
+    # client_id = 1
+    # phone_number = 89199997779
     # phone_delete(conn, 1, 89199997779)
 
     # Удаление клиента
+    # client_id = 1
     # client_delete(conn, 1)
 
+    # Поиск по параметру
+    # find_client(conn,'Иванов')
+    # find_client(conn, None, 'Иван')
+    # find_client(conn, None, None, 'notrandom@mail.ru' )
+    # find_client(conn, None, None, None, 89199997707)
 
-    # find_client(conn)
-    l_name = 'Иванов'
-    cur=conn.cursor()
-    cur.execute("""
-    SELECT * FROM client WHERE last_name = 'Иванов' """)
-    print(cur.fetchall())
 conn.close()
